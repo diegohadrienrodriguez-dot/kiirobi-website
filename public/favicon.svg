@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" fill="none">
+  <!-- Kiirobi circuit-tree mark, static colored version for favicon use -->
+  <line x1="40" y1="72" x2="40" y2="44" stroke="#008E8C" stroke-width="2.5" />
+  <line x1="40" y1="44" x2="18" y2="28" stroke="#008E8C" stroke-width="2" />
+  <line x1="40" y1="44" x2="62" y2="28" stroke="#008E8C" stroke-width="2" />
+  <line x1="18" y1="28" x2="10" y2="14" stroke="#008E8C" stroke-width="1.5" />
+  <line x1="18" y1="28" x2="28" y2="14" stroke="#008E8C" stroke-width="1.5" />
+  <line x1="62" y1="28" x2="52" y2="14" stroke="#008E8C" stroke-width="1.5" />
+  <line x1="62" y1="28" x2="70" y2="14" stroke="#008E8C" stroke-width="1.5" />
+  <circle cx="10" cy="12" r="4" fill="#EE545C" />
+  <circle cx="28" cy="12" r="4" fill="#1980BA" />
+  <circle cx="52" cy="12" r="4" fill="#73C39C" />
+  <circle cx="70" cy="12" r="4" fill="#F8BA40" />
+  <circle cx="18" cy="28" r="3" fill="#008E8C" />
+  <circle cx="62" cy="28" r="3" fill="#008E8C" />
+  <circle cx="40" cy="44" r="3.5" fill="#008E8C" />
+  <circle cx="40" cy="72" r="3" fill="#008E8C" />
+</svg>

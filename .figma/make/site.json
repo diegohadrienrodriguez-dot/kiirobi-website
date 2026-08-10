@@ -1,0 +1,15 @@
+{
+  "title": "Kiirobi — Agence de communication et de production audiovisuelle",
+  "description": "Kiirobi est une agence mauritanienne de conseil, création, événementiel et production multimédia, basée à Nouakchott. Stratégie digitale, communication et contenus audiovisuels sur mesure.",
+  "language": "fr",
+  "robots": {
+    "index": true
+  },
+  "icons": {
+    "icon": "/favicon.svg"
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

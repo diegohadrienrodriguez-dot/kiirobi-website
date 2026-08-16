@@ -6,12 +6,23 @@ import path from 'node:path'
 import siteConfiguration from './.figma/make/site.json'
 
 // Vite config — https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
 
+  // GitHub Pages serves project sites from a `/<repo-name>/` subpath, so the
+  // production build needs that prefix baked into every asset URL. Figma's
+  // own deploy pipeline sets FIGMA_PUBLIC_URL and takes priority when present.
+  // The dev server (`command === 'serve'`, used by `pnpm dev` on :8443) always
+  // stays at `/` so local development is unaffected.
+  const base = process.env.FIGMA_PUBLIC_URL
+    ? `${process.env.FIGMA_PUBLIC_URL}/`
+    : command === 'build'
+      ? '/kiirobi-website/'
+      : '/'
+
   return {
-    base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
+    base,
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,
@@ -80,6 +91,15 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   function replaceHtmlCommentSlot(html: string, slotName: string, content: string): string {
     return html.replace(`<!-- ${slotName} -->`, content)
   }
+  // Root-relative paths from site.json (e.g. "/favicon.svg") assume the site
+  // is served from "/". Under a GitHub Pages project base (e.g.
+  // "/kiirobi-website/") that assumption breaks, so re-anchor them to the
+  // resolved build base instead. Absolute URLs (http://, https://) pass through.
+  let resolvedBase = '/'
+  function withBase(assetPath: string): string {
+    if (!assetPath || /^https?:\/\//.test(assetPath)) return assetPath
+    return resolvedBase + assetPath.replace(/^\//, '')
+  }
 
   const title = config.title ?? "Figma Make App"
   const description = config.description ?? ''
@@ -95,6 +115,9 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
 
   return {
     name: 'figma-site-configuration',
+    configResolved(resolvedConfig) {
+      resolvedBase = resolvedConfig.base
+    },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (!robotsTxt || req.url?.split('?')[0] !== '/robots.txt') return next()
@@ -131,7 +154,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
           tags.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex, nofollow' }, injectTo: 'head' })
         }
         if (favicon) {
-          tags.push({ tag: 'link', attrs: { rel: 'icon', href: favicon }, injectTo: 'head' })
+          tags.push({ tag: 'link', attrs: { rel: 'icon', href: withBase(favicon) }, injectTo: 'head' })
         }
         if (title) {
           tags.push({ tag: 'meta', attrs: { property: 'og:title', content: title }, injectTo: 'head' })
@@ -141,9 +164,9 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
         }
         if (socialImage) {
           tags.push(
-            { tag: 'meta', attrs: { property: 'og:image', content: socialImage }, injectTo: 'head' },
+            { tag: 'meta', attrs: { property: 'og:image', content: withBase(socialImage) }, injectTo: 'head' },
             { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' }, injectTo: 'head' },
-            { tag: 'meta', attrs: { name: 'twitter:image', content: socialImage }, injectTo: 'head' },
+            { tag: 'meta', attrs: { name: 'twitter:image', content: withBase(socialImage) }, injectTo: 'head' },
           )
         }
 

@@ -1,4 +1,17 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useContext, createContext } from 'react'
+import { content, type Lang, type SiteContent } from './content'
+
+// ── Language context ───────────────────────────────────────────────────────
+// Client-side toggle only (no separate routes per language — this stays a
+// one-page app), so SEO metadata in .figma/make/site.json/index.html is not
+// affected by this and remains French-only for now.
+const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({
+  lang: 'fr',
+  setLang: () => {},
+})
+function useLang() {
+  return useContext(LangContext)
+}
 
 // ── Kiirobi Circuit-Tree Logo SVG ─────────────────────────────────────────────
 // `speed` scales the whole draw-in timeline (1 = normal hero pace, <1 = faster
@@ -100,7 +113,7 @@ function FadeSection({ children, style = {}, className = '' }: { children: React
 }
 
 // ── Mentions légales modal ────────────────────────────────────────────────────
-function MentionsModal({ onClose }: { onClose: () => void }) {
+function MentionsModal({ onClose, copy }: { onClose: () => void; copy: SiteContent['mentions'] }) {
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -159,18 +172,12 @@ function MentionsModal({ onClose }: { onClose: () => void }) {
         style={{ background: '#fff', maxWidth: 640, width: '100%', maxHeight: '80vh', overflowY: 'auto', padding: 48, position: 'relative', outline: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} aria-label="Fermer les mentions légales" style={{ position: 'absolute', top: 20, right: 24, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Barlow Condensed', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', transition: 'color 0.2s' }}>✕</button>
-        <h2 id="mentions-title" style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '2rem', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 32 }}>Mentions légales</h2>
-        {[
-          ['Éditeur du site', 'Kiirobi SARL — Près de Sheraton Hotel, TVZ, Nouakchott, Mauritanie. Directeur de publication : Direction Kiirobi.'],
-          ['Hébergeur', 'OVH SAS — 2 rue Kellermann, 59100 Roubaix, France.'],
-          ['Données personnelles', "Les informations recueillies via ce site font l'objet d'un traitement informatique destiné exclusivement à répondre à vos demandes. Conformément aux réglementations en vigueur, vous disposez d'un droit d'accès et de rectification."],
-          ['Propriété intellectuelle', "L'ensemble des contenus présents sur ce site (textes, visuels, logo, vidéos) sont la propriété exclusive de Kiirobi ou font l'objet d'une autorisation d'utilisation."],
-          ['Cookies', 'Ce site utilise uniquement des cookies techniques nécessaires à son bon fonctionnement. Aucun cookie publicitaire tiers.'],
-        ].map(([t, c]) => (
-          <div key={t} style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--rule)' }}>
-            <h3 style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 8 }}>{t}</h3>
-            <p style={{ fontSize: '0.85rem', lineHeight: 1.7, color: 'var(--ink-muted)' }}>{c}</p>
+        <button onClick={onClose} aria-label={copy.closeLabel} style={{ position: 'absolute', top: 20, insetInlineEnd: 24, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', transition: 'color 0.2s' }}>✕</button>
+        <h2 id="mentions-title" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2rem', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 32 }}>{copy.title}</h2>
+        {copy.sections.map(({ title, body }) => (
+          <div key={title} style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--rule)' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 8 }}>{title}</h3>
+            <p style={{ fontSize: '0.85rem', lineHeight: 1.7, color: 'var(--ink-muted)' }}>{body}</p>
           </div>
         ))}
       </div>
@@ -178,25 +185,30 @@ function MentionsModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ── Lang switch (FR live, AR coming soon — no i18n dictionary exists yet) ──────
+// ── Lang switch (FR ⇄ AR, both live) ────────────────────────────────────────
 function LangSwitch({ size = 'md' }: { size?: 'sm' | 'md' }) {
+  const { lang, setLang } = useLang()
   const padding = size === 'sm' ? '5px 12px' : '8px 18px'
   const fontSize = size === 'sm' ? '0.8rem' : '0.85rem'
   const base: React.CSSProperties = {
-    fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize, letterSpacing: '0.08em', textTransform: 'uppercase',
+    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize, letterSpacing: '0.08em', textTransform: 'uppercase',
     padding, border: 'none', transition: 'background 0.2s, color 0.2s',
   }
   return (
     <>
-      <button type="button" aria-current="true" style={{ ...base, cursor: 'default', background: 'var(--turquoise)', color: 'white' }}>
+      <button
+        type="button"
+        aria-current={lang === 'fr' || undefined}
+        onClick={() => setLang('fr')}
+        style={{ ...base, cursor: lang === 'fr' ? 'default' : 'pointer', background: lang === 'fr' ? 'var(--turquoise)' : 'transparent', color: lang === 'fr' ? 'white' : 'var(--ink-muted)' }}
+      >
         fr
       </button>
       <button
         type="button"
-        disabled
-        aria-disabled="true"
-        title="Version arabe — bientôt disponible"
-        style={{ ...base, cursor: 'not-allowed', background: 'transparent', color: 'var(--ink-muted)', opacity: 0.4 }}
+        aria-current={lang === 'ar' || undefined}
+        onClick={() => setLang('ar')}
+        style={{ ...base, cursor: lang === 'ar' ? 'default' : 'pointer', background: lang === 'ar' ? 'var(--turquoise)' : 'transparent', color: lang === 'ar' ? 'white' : 'var(--ink-muted)' }}
       >
         ar
       </button>
@@ -228,28 +240,32 @@ function SplitSection({ num, line1, line2, para, media, bg = '#fff' }: {
   )
 }
 
-// ── Clients data ──────────────────────────────────────────────────────────────
-const clients = [
-  { name: 'UNICEF', logo: 'UNICEF', desc: "Accompagnement médiatique et production de contenus audiovisuels pour les campagnes de sensibilisation en Mauritanie.", tags: ['Audiovisuel', 'Digital', 'Campagne'] },
-  { name: 'World Vision', logo: 'WORLD VISION', desc: "Production de reportages de terrain et diffusion via Tawatur pour les programmes humanitaires au Sahel.", tags: ['Reportage', 'Social media'] },
-  { name: 'PAM & FAO', logo: 'PAM / FAO', desc: "Couverture médiatique des programmes alimentaires et agricoles, production de films institutionnels.", tags: ['Institutionnel', 'Vidéo'] },
-  { name: 'SWEDD', logo: 'SWEDD', desc: "Stratégie de communication digitale et production de contenus pour le programme régional d'autonomisation des femmes.", tags: ['Stratégie', 'Digital', 'Genre'] },
-  { name: 'SNIM', logo: 'SNIM', desc: "Communication corporate et couverture événementielle pour la Société Nationale Industrielle et Minière.", tags: ['Corporate', 'Événement'] },
-  { name: 'Bankily – BPM', logo: 'BANKILY', desc: "Campagnes digitales de promotion du mobile banking et production de spots publicitaires.", tags: ['Pub', 'Digital', 'Finance'] },
-  { name: 'VISA', logo: 'VISA', desc: "Activation de marque et production de contenus promotionnels pour le marché mauritanien.", tags: ['Branding', 'Activation'] },
-  { name: 'GIMTEL', logo: 'GIMTEL', desc: "Refonte de communication institutionnelle et gestion des réseaux sociaux de la plateforme monétique.", tags: ['Social media', 'Institutionnel'] },
-  { name: 'BPC', logo: 'BPC', desc: "Conseil en stratégie de communication et production de supports print et digitaux.", tags: ['Conseil', 'Print', 'Digital'] },
-  { name: 'Grande Muraille Verte', logo: 'GRANDE MURAILLE VERTE', desc: "Couverture de terrain et productions documentaires sur l'initiative africaine de reforestation.", tags: ['Documentaire', 'RSE'] },
-  { name: 'PEJ', logo: 'PEJ', desc: "Stratégie digitale et production multimédia pour le Programme Emplois des Jeunes en Mauritanie.", tags: ['Stratégie', 'Digital'] },
-  { name: 'UBM', logo: 'UBM', desc: "Communication événementielle et gestion des réseaux sociaux de l'Union des Banques de Mauritanie.", tags: ['Événement', 'Social media'] },
-  { name: 'Same Paris', logo: 'SAME PARIS', desc: "Identité visuelle et production de contenus pour le lancement mauritanien de la marque.", tags: ['Identité', 'Lancement'] },
-  { name: 'Union Européenne', logo: 'UNION EUROPÉENNE', desc: "Couverture presse et production vidéo pour les programmes de développement financés par l'UE.", tags: ['Presse', 'Vidéo', 'Institutionnel'] },
-  { name: 'Tasiast Mauritanie', logo: 'TASIAST', desc: "Communication RSE et reportages terrain pour la mine d'or de Tasiast.", tags: ['RSE', 'Reportage', 'Mine'] },
-  { name: 'DipNdip', logo: 'DIPNDIP', desc: "Lancement de marque et stratégie de communication digitale pour l'ouverture sur le marché mauritanien.", tags: ['Branding', 'Digital', 'Food'] },
-]
-
-// ── Main App ──────────────────────────────────────────────────────────────────
+// ── Main App shell — sets up language state, then renders the page ─────────
 export default function App() {
+  const [lang, setLang] = useState<Lang>(() => {
+    if (typeof window === 'undefined') return 'fr'
+    const stored = window.localStorage.getItem('kiirobi-lang')
+    return stored === 'ar' || stored === 'fr' ? stored : 'fr'
+  })
+
+  useEffect(() => {
+    window.localStorage.setItem('kiirobi-lang', lang)
+    document.documentElement.lang = content[lang].htmlLang
+    document.documentElement.dir = content[lang].dir
+    document.title = content[lang].documentTitle
+  }, [lang])
+
+  return (
+    <LangContext.Provider value={{ lang, setLang }}>
+      <Page />
+    </LangContext.Provider>
+  )
+}
+
+// ── Page content ─────────────────────────────────────────────────────────────
+function Page() {
+  const { lang } = useLang()
+  const t = content[lang]
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [mentions, setMentions] = useState(false)
@@ -261,14 +277,6 @@ export default function App() {
     window.addEventListener('scroll', fn, { passive: true })
     return () => window.removeEventListener('scroll', fn)
   }, [])
-
-  const nav = [
-    { label: 'À propos', href: '#section00' },
-    { label: 'Nos valeurs', href: '#section01' },
-    { label: 'Notre expertise', href: '#section04' },
-    { label: 'Nos clients', href: '#section05' },
-    { label: 'Contact', href: '#contact' },
-  ]
 
   const go = (href: string) => {
     setMenuOpen(false)
@@ -294,7 +302,7 @@ export default function App() {
 
           {/* Nav desktop */}
           <nav style={{ gap: 32 }} className="hidden md:flex">
-            {nav.map((l) => (
+            {t.nav.map((l) => (
               <a key={l.label} href={l.href} className="nav-link" onClick={(e) => { e.preventDefault(); go(l.href) }}>{l.label}</a>
             ))}
           </nav>
@@ -319,9 +327,9 @@ export default function App() {
           opacity: menuOpen ? 1 : 0, transform: menuOpen ? 'none' : 'translateX(100%)',
           transition: 'opacity 0.3s, transform 0.3s', pointerEvents: menuOpen ? 'auto' : 'none',
         }}>
-          {nav.map((l) => (
+          {t.nav.map((l) => (
             <a key={l.label} href={l.href} onClick={(e) => { e.preventDefault(); go(l.href) }}
-              style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '2.8rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink)', textDecoration: 'none', transition: 'color 0.2s' }}
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.8rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink)', textDecoration: 'none', transition: 'color 0.2s' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--turquoise)')}
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink)')}
             >{l.label}</a>
@@ -346,13 +354,13 @@ export default function App() {
         <div style={{ position: 'relative', zIndex: 1, marginTop: 32 }}>
           {/* Each line sits behind a curtain that slides away on load, instead
               of the line itself fading/translating in. */}
-          <h1 style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: 'clamp(2.8rem,7vw,7rem)', lineHeight: 0.92, letterSpacing: '-0.02em', textTransform: 'uppercase', color: 'var(--ink)' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.8rem,7vw,7rem)', lineHeight: 0.92, letterSpacing: '-0.02em', textTransform: 'uppercase', color: 'var(--ink)' }}>
             <span style={{ display: 'block', position: 'relative', overflow: 'hidden' }}>
-              {"L'agence de communication"}
+              {t.hero.line1}
               <span className="reveal-mask" style={{ animationDelay: '0.3s' }} />
             </span>
             <span style={{ display: 'block', position: 'relative', overflow: 'hidden', color: 'var(--turquoise)' }}>
-              qui connecte vos idées à vos publics
+              {t.hero.line2}
               <span className="reveal-mask" style={{ animationDelay: '0.5s' }} />
             </span>
           </h1>
@@ -360,13 +368,13 @@ export default function App() {
 
         <div style={{ animation: 'fadeUp 0.7s 0.4s both', position: 'relative', zIndex: 1, maxWidth: 620, marginTop: 28 }}>
           <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--ink-muted)' }}>
-            Kiirobi est une agence de communication spécialisée en Conseil, Création, Évènementiel, Élaboration et mise en place de stratégies web, communication digitale et production de contenus multimédias.
+            {t.hero.intro}
           </p>
         </div>
 
         <div style={{ animation: 'fadeUp 0.7s 0.6s both', position: 'relative', zIndex: 1, marginTop: 48 }}>
-          <button onClick={() => go('#section00')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink)' }}>
-            {"Découvrir l'agence"}
+          <button onClick={() => go('#section00')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink)' }}>
+            {t.hero.cta}
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ animation: 'floatArrow 2s ease-in-out infinite' }}>
               <path d="M10 4v12M5 12l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -376,20 +384,20 @@ export default function App() {
 
       {/* ── SECTION 00 — Positionnement (bordeaux) ──────────────────────────── */}
       <section id="section00" style={{ background: 'var(--bordeaux)', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', right: -60, transform: 'translateY(-50%)' }}>
+        <div style={{ position: 'absolute', top: '50%', insetInlineEnd: -60, transform: 'translateY(-50%)' }}>
           <CircuitTree size={420} muted />
         </div>
         <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div className="section-number section-number-dark">00</div>
           <FadeSection>
             <div style={{ maxWidth: 780, margin: '80px auto 0', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'Barlow Condensed', fontWeight: 800, fontSize: 'clamp(2rem,4.5vw,4rem)', lineHeight: 1.05, letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 36 }}>
-                {"« L'excellence et le sens du détail »"}<br />
-                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.6em', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>comme devise fondamentale</span>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(2rem,4.5vw,4rem)', lineHeight: 1.05, letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 36 }}>
+                {t.section00.quote}<br />
+                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.6em', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{t.section00.subtitle}</span>
               </p>
               <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.18)', margin: '0 auto 36px', width: 80 }} />
               <p style={{ fontSize: '1rem', lineHeight: 1.85, color: 'rgba(255,255,255,0.6)' }}>
-                Basée en Mauritanie, Kiirobi intervient en tant que régie publicitaire et agence de production au niveau national et dans la sous-région. Kiirobi appuie son action de production audiovisuelle par la capitalisation sur l'expertise de son média digital Tawatur, première plateforme mauritanienne en termes de visibilité, de taux de pénétration et d'impact sur l'opinion publique.
+                {t.section00.body}
               </p>
             </div>
           </FadeSection>
@@ -399,9 +407,9 @@ export default function App() {
       {/* ── SECTION 01 — Excellente ─────────────────────────────────────────── */}
       <SplitSection
         num="01"
-        line1="KIIROBI EST"
-        line2="EXCELLENTE."
-        para="Un engagement envers l'excellence qui se reflète dans la qualité de nos productions. Plus de 12 000 vidéos produites et diffusées sur les réseaux sociaux via les canaux de notre média digital Tawatur."
+        line1={t.section01.line1}
+        line2={t.section01.line2}
+        para={t.section01.para}
         media={
           <>
             <div style={{ background: '#1a1a1a', aspectRatio: '16/9', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}>
@@ -412,10 +420,10 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>Voir nos productions audiovisuelles — Studio Kiirobi</p>
+            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section01.caption1}</p>
             <div style={{ marginTop: 20 }}>
               <img src="https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=800&h=400&fit=crop&auto=format" alt="Accompagnement médiatique Nations Unies FAO PAM UNICEF" style={{ width: '100%', aspectRatio: '16/8', objectFit: 'cover' }} />
-              <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>Accompagnement médiatique et audiovisuel — FAO, PAM, UNICEF</p>
+              <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section01.caption2}</p>
             </div>
           </>
         }
@@ -424,14 +432,14 @@ export default function App() {
       {/* ── SECTION 02 — Créative ───────────────────────────────────────────── */}
       <SplitSection
         num="02"
-        line1="KIIROBI EST"
-        line2="CRÉATIVE."
+        line1={t.section02.line1}
+        line2={t.section02.line2}
         bg="var(--ground-alt)"
-        para="Le Studio Kiirobi réunit une équipe multidisciplinaire de graphistes, web designers, développeurs, community managers et chefs de projet, dans un processus continu et interconnecté qui vise à fournir des solutions de communication de haute qualité, efficaces et personnalisées."
+        para={t.section02.para}
         media={
           <>
             <img src="https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=560&fit=crop&auto=format" alt="Création d'identités visuelles et motion design Kiirobi" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />
-            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{"Création d'identités visuelles, motion design et contenus sur mesure"}</p>
+            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section02.caption}</p>
           </>
         }
       />
@@ -439,13 +447,13 @@ export default function App() {
       {/* ── SECTION 03 — Transparente ───────────────────────────────────────── */}
       <SplitSection
         num="03"
-        line1="KIIROBI EST"
-        line2="TRANSPARENTE."
-        para="Un suivi attentif et un accompagnement étroit à chaque étape, pour maximiser les avantages de nos services. Nous croyons en une relation de long terme avec nos clients, dans le cadre d'une étroite collaboration avec des acteurs du secteur privé et public, des ONG internationales et les agences des Nations Unies."
+        line1={t.section03.line1}
+        line2={t.section03.line2}
+        para={t.section03.para}
         media={
           <>
             <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=560&fit=crop&auto=format" alt="Coordination terrain SWEDD Banque mondiale Kiirobi" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />
-            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>Coordination sur le terrain — SWEDD & Banque mondiale</p>
+            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section03.caption}</p>
           </>
         }
       />
@@ -457,11 +465,11 @@ export default function App() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start', paddingTop: 80 }}>
             <FadeSection>
               <h2 className="section-title" style={{ marginBottom: 32 }}>
-                KIIROBI EST<br />
-                <span style={{ color: 'var(--turquoise)' }}>TECHNOLOGIQUE.</span>
+                {t.section04.line1}<br />
+                <span style={{ color: 'var(--turquoise)' }}>{t.section04.line2}</span>
               </h2>
               <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--ink-muted)', maxWidth: 440 }}>
-                Nos équipements et compétences techniques couvrent l'intégralité de la chaîne de production : tournage multi-caméras, prises de vue par drone, studio professionnel, montage non linéaire et post-production audiovisuelle de haut niveau.
+                {t.section04.para}
               </p>
             </FadeSection>
             <div />
@@ -471,30 +479,28 @@ export default function App() {
           <FadeSection style={{ marginTop: 56 }}>
             <div style={{ position: 'relative' }}>
               <img src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=1440&h=560&fit=crop&auto=format" alt="Équipement de production audiovisuelle Kiirobi" style={{ width: '100%', height: 460, objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', bottom: 16, left: 20, background: 'rgba(255,255,255,0.92)', padding: '6px 14px', backdropFilter: 'blur(8px)' }}>
-                <p style={{ fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)' }}>Studio de production — Kiirobi, Nouakchott</p>
+              <div style={{ position: 'absolute', bottom: 16, insetInlineStart: 20, background: 'rgba(255,255,255,0.92)', padding: '6px 14px', backdropFilter: 'blur(8px)' }}>
+                <p style={{ fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)' }}>{t.section04.imageCaption}</p>
               </div>
             </div>
           </FadeSection>
 
           {/* 4 pôles */}
           <FadeSection style={{ marginTop: 64 }}>
-            <p style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 36 }}>
-              Nous proposons 4 pôles d'expertise
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 36 }}>
+              {t.section04.polesTitle}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
-              {[
-                { n: '01', color: 'var(--coral)', title: 'Conseil & Stratégie', desc: 'Conseil éditorial / Stratégie de communication / Planning stratégique digital / Veille et e-réputation' },
-                { n: '02', color: 'var(--blue)', title: 'Digital & Web', desc: 'Web & webdesign / Social media management / Community management / Media planning / Traffic management' },
-                { n: '03', color: 'var(--mint)', title: 'Design & Branding', desc: 'Design graphique / Identité visuelle / Illustration / Branding et rebranding' },
-                { n: '04', color: 'var(--gold)', title: 'Production & Événementiel', desc: 'Production audiovisuelle TV/Web/Radio / Reportages / Motion design / Relations publiques / Événementiel' },
-              ].map((item) => (
-                <div key={item.n} className="expertise-item" style={{ padding: '28px 24px 28px 0' }}>
-                  <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.1em', color: item.color, marginBottom: 10 }}>{item.n}</div>
-                  <h3 style={{ fontFamily: 'Barlow Condensed', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 10, color: 'var(--ink)' }}>{item.title}</h3>
-                  <p style={{ fontSize: '0.8rem', lineHeight: 1.7, color: 'var(--ink-muted)' }}>{item.desc}</p>
-                </div>
-              ))}
+              {t.section04.poles.map((item, i) => {
+                const color = ['var(--coral)', 'var(--blue)', 'var(--mint)', 'var(--gold)'][i % 4]
+                return (
+                  <div key={item.n} className="expertise-item" style={{ paddingBlock: 28, paddingInlineEnd: 24, paddingInlineStart: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.1em', color, marginBottom: 10 }}>{item.n}</div>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 10, color: 'var(--ink)' }}>{item.title}</h3>
+                    <p style={{ fontSize: '0.8rem', lineHeight: 1.7, color: 'var(--ink-muted)' }}>{item.desc}</p>
+                  </div>
+                )
+              })}
             </div>
           </FadeSection>
         </div>
@@ -506,12 +512,12 @@ export default function App() {
           <div className="section-number">05</div>
           <FadeSection style={{ paddingTop: 80, marginBottom: 56 }}>
             <h2 className="section-title">
-              ILS NOUS FONT<br />
-              <span style={{ color: 'var(--turquoise)' }}>CONFIANCE.</span>
+              {t.section05.line1}<br />
+              <span style={{ color: 'var(--turquoise)' }}>{t.section05.line2}</span>
             </h2>
           </FadeSection>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {clients.map((c, i) => {
+            {t.clients.map((c, i) => {
               const accent = [
                 'var(--turquoise)', 'var(--coral)', 'var(--blue)',
                 'var(--mint)', 'var(--gold)', 'var(--bordeaux)',
@@ -519,7 +525,7 @@ export default function App() {
               return (
                 <FadeSection key={c.name}>
                   <div className="client-card">
-                    <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: accent, paddingBottom: 14, borderBottom: '1px solid var(--rule)' }}>{c.logo}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: accent, paddingBottom: 14, borderBottom: '1px solid var(--rule)' }}>{c.logo}</div>
                     <p style={{ fontSize: '0.84rem', lineHeight: 1.7, color: 'var(--ink-muted)', flexGrow: 1 }}>{c.desc}</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                       {c.tags.map((t) => <span key={t} className="tag-pill">{t}</span>)}
@@ -534,28 +540,28 @@ export default function App() {
 
       {/* ── CONTACT ─────────────────────────────────────────────────────────── */}
       <section id="contact" style={{ background: 'var(--ground-alt)', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', bottom: -80, right: -60, opacity: 0.06 }}>
+        <div style={{ position: 'absolute', bottom: -80, insetInlineEnd: -60, opacity: 0.06 }}>
           <CircuitTree size={500} muted />
         </div>
         <div style={{ maxWidth: 1440, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
             <FadeSection>
               <h2 className="section-title" style={{ marginBottom: 48 }}>
-                PARLONS DE<br />
-                VOTRE<br />
-                <span style={{ color: 'var(--turquoise)' }}>PROJET</span>
+                {t.contact.heading[0]}<br />
+                {t.contact.heading[1]}<br />
+                <span style={{ color: 'var(--turquoise)' }}>{t.contact.heading[2]}</span>
               </h2>
               {/* Coordinates */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {[
-                  { icon: '✉', label: 'Email', val: 'bridge@kiirobi.com' },
-                  { icon: '☎', label: 'Téléphone', val: '36 13 43 49 / +222 20 43 29 30' },
-                  { icon: '⊕', label: 'Adresse', val: 'Près de Sheraton Hotel, TVZ, Nouakchott, Mauritanie' },
+                  { icon: '✉', label: t.contact.labels.email, val: 'bridge@kiirobi.com' },
+                  { icon: '☎', label: t.contact.labels.phone, val: '36 13 43 49 / +222 20 43 29 30' },
+                  { icon: '⊕', label: t.contact.labels.address, val: t.contact.addressValue },
                 ].map((item) => (
                   <div key={item.label} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
                     <div style={{ width: 32, height: 32, background: 'var(--turquoise-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.9rem', color: 'var(--turquoise)' }}>{item.icon}</div>
                     <div>
-                      <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 2 }}>{item.label}</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 2 }}>{item.label}</div>
                       <div style={{ fontSize: '0.9rem', color: 'var(--ink)' }}>{item.val}</div>
                     </div>
                   </div>
@@ -566,22 +572,22 @@ export default function App() {
             <FadeSection>
               {sent ? (
                 <div style={{ paddingTop: 16 }}>
-                  <p style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '2.2rem', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 12 }}>Message envoyé !</p>
-                  <p style={{ color: 'var(--ink-muted)', lineHeight: 1.7 }}>Nous reviendrons vers vous dans les meilleurs délais.</p>
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.2rem', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 12 }}>{t.contact.form.sentTitle}</p>
+                  <p style={{ color: 'var(--ink-muted)', lineHeight: 1.7 }}>{t.contact.form.sentBody}</p>
                 </div>
               ) : (
                 <form onSubmit={(e) => { e.preventDefault(); setSent(true) }} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <input className="form-input" type="text" placeholder="Nom & Prénom" required value={form.nom} onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))} />
-                  <input className="form-input" type="email" placeholder="Adresse e-mail" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-                  <input className="form-input" type="tel" placeholder="Téléphone" value={form.tel} onChange={(e) => setForm((f) => ({ ...f, tel: e.target.value }))} />
-                  <textarea className="form-input" placeholder="Votre message" rows={5} required value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} style={{ resize: 'vertical' }} />
+                  <input className="form-input" type="text" placeholder={t.contact.form.name} required value={form.nom} onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))} />
+                  <input className="form-input" type="email" placeholder={t.contact.form.email} required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+                  <input className="form-input" type="tel" placeholder={t.contact.form.phone} value={form.tel} onChange={(e) => setForm((f) => ({ ...f, tel: e.target.value }))} />
+                  <textarea className="form-input" placeholder={t.contact.form.message} rows={5} required value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} style={{ resize: 'vertical' }} />
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                     <input type="checkbox" id="rgpd" required checked={form.rgpd} onChange={(e) => setForm((f) => ({ ...f, rgpd: e.target.checked }))} style={{ marginTop: 3, accentColor: 'var(--turquoise)', flexShrink: 0 }} />
                     <label htmlFor="rgpd" style={{ fontSize: '0.78rem', lineHeight: 1.6, color: 'var(--ink-muted)' }}>
-                      J'accepte que mes données soient utilisées par Kiirobi dans le cadre du traitement de ma demande, conformément à notre politique de confidentialité.
+                      {t.contact.form.rgpd}
                     </label>
                   </div>
-                  <div><button type="submit" className="cta-btn">Envoyer</button></div>
+                  <div><button type="submit" className="cta-btn">{t.contact.form.submit}</button></div>
                 </form>
               )}
             </FadeSection>
@@ -595,18 +601,18 @@ export default function App() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <CircuitTree size={32} />
-              <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '1.4rem', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>Kiirobi</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.4rem', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{t.footer.brand}</span>
             </div>
-            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Agence de Communication & Production</p>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t.footer.tagline}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em' }}>Kiirobi © {new Date().getFullYear()}</span>
-            <button onClick={() => setMentions(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.76rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.5)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'Inter', transition: 'color 0.2s' }}>Mentions légales</button>
+            <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em' }}>{t.footer.brand} © {new Date().getFullYear()}</span>
+            <button onClick={() => setMentions(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.76rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.5)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'var(--font-body)', transition: 'color 0.2s' }}>{t.footer.legalLink}</button>
           </div>
         </div>
       </footer>
 
-      {mentions && <MentionsModal onClose={() => setMentions(false)} />}
+      {mentions && <MentionsModal onClose={() => setMentions(false)} copy={t.mentions} />}
     </div>
   )
 }

@@ -35,11 +35,23 @@ body {
      whenever <html dir="rtl">. Same idea for the body font → Tajawal. */
   --font-display: 'Barlow Condensed', sans-serif;
   --font-body: 'Inter', sans-serif;
+
+  /* Barlow Condensed tolerates very tight leading (used on the hero title
+     and big section headings for the editorial look). Cairo's taller
+     ascenders/descenders collide at those same ratios — RTL below loosens
+     them so wrapped/stacked heading lines don't visually overlap. */
+  --lh-display-tight: 0.9;
+  --lh-display-hero: 0.92;
+  --lh-display-loose: 1.05;
 }
 
 html[dir='rtl'] {
   --font-display: 'Cairo', sans-serif;
   --font-body: 'Tajawal', sans-serif;
+
+  --lh-display-tight: 1.35;
+  --lh-display-hero: 1.35;
+  --lh-display-loose: 1.4;
 }
 
 ::-webkit-scrollbar { width: 3px; }
@@ -72,7 +84,7 @@ html[dir='rtl'] {
   font-family: var(--font-display);
   font-weight: 900;
   font-size: clamp(3.2rem, 6.5vw, 6.5rem);
-  line-height: 0.9;
+  line-height: var(--lh-display-tight);
   letter-spacing: -0.02em;
   text-transform: uppercase;
 }
@@ -112,18 +124,126 @@ html[dir='rtl'] {
   color: var(--ink-muted);
 }
 
-.client-card {
-  background: #fff;
-  border: 1px solid var(--rule);
-  padding: 26px;
+.story-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+}
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+}
+.quote-decor { display: block; }
+
+@media (max-width: 860px) {
+  .story-split { grid-template-columns: 1fr; gap: 40px; }
+  .story-split-solo { gap: 0; }
+  .contact-grid { grid-template-columns: 1fr; gap: 48px; }
+  .quote-decor { display: none; }
+}
+
+/* Clients masonry — Pinterest-style column flow, brand-gradient tiles */
+.clients-masonry {
+  column-count: 1;
+  column-gap: 16px;
+}
+@media (min-width: 640px)  { .clients-masonry { column-count: 2; } }
+@media (min-width: 1024px) { .clients-masonry { column-count: 3; } }
+@media (min-width: 1400px) { .clients-masonry { column-count: 4; } }
+
+.client-tile {
+  position: relative;
+  overflow: hidden;
+  break-inside: avoid;
+  margin-bottom: 16px;
+  background-color: #0d1a19;
+}
+.client-tile-photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.client-tile:hover .client-tile-photo { transform: scale(1.08); }
+.client-tile-tint {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: multiply;
+}
+.client-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 55%, transparent 78%);
+  pointer-events: none;
+}
+.client-tile-trigger {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  transition: box-shadow 0.2s, transform 0.18s;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  cursor: pointer;
+  text-align: start;
 }
-.client-card:hover {
-  box-shadow: 0 6px 28px rgba(0,142,140,0.1);
-  transform: translateY(-2px);
+.client-tile-toggle {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 16px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.6);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: transform 0.3s cubic-bezier(0.65,0,0.35,1), background 0.2s;
+}
+.client-tile-trigger:hover .client-tile-toggle { background: rgba(255,255,255,0.15); }
+.client-tile-trigger[aria-expanded='true'] .client-tile-toggle { transform: rotate(45deg); background: rgba(255,255,255,0.18); }
+.client-tile-body { position: relative; }
+.client-tile-name {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.client-tile-preview {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.72);
+}
+.client-tile-desc {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.88);
+  margin-bottom: 14px;
+}
+.client-tile-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.client-tile-tag {
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.45);
+  padding: 3px 9px;
 }
 
 .cta-btn {

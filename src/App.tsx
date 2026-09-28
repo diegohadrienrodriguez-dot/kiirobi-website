@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useContext, createContext } from 'react'
-import { content, type Lang, type SiteContent } from './content'
+import { content, type Lang, type SiteContent, type StorySection } from './content'
+import { useParallaxRef, ParallaxImage, ScrollProgress, refreshScrollFx } from './scrollFx'
+import { ClientsMasonry } from './masonryGrid'
 
 // ── Language context ───────────────────────────────────────────────────────
 // Client-side toggle only (no separate routes per language — this stays a
@@ -95,7 +97,9 @@ function CircuitTree({ size = 80, animated = false, muted = false, speed = 1, pu
 }
 
 // ── FadeSection wrapper ───────────────────────────────────────────────────────
-function FadeSection({ children, style = {}, className = '' }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
+// `delay` (seconds) staggers siblings that reveal at roughly the same time —
+// e.g. a grid of cards — mirroring the reference site's `data-reveal-group`.
+function FadeSection({ children, style = {}, className = '', delay = 0 }: { children: React.ReactNode; style?: React.CSSProperties; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const [vis, setVis] = useState(false)
   useEffect(() => {
@@ -106,7 +110,7 @@ function FadeSection({ children, style = {}, className = '' }: { children: React
     return () => obs.disconnect()
   }, [])
   return (
-    <div ref={ref} className={className} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(28px)', transition: 'opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1)', ...style }}>
+    <div ref={ref} className={className} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(28px)', transition: `opacity 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}s, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}s`, ...style }}>
       {children}
     </div>
   )
@@ -216,25 +220,141 @@ function LangSwitch({ size = 'md' }: { size?: 'sm' | 'md' }) {
   )
 }
 
-// ── Section split layout (text left, media right) ─────────────────────────────
-function SplitSection({ num, line1, line2, para, media, bg = '#fff' }: {
-  num: string; line1: string; line2: string; para: string;
-  media: React.ReactNode; bg?: string;
-}) {
+// ── Story intro (bordeaux, centered) — the opening line before the history ──
+function StoryIntro({ kicker, title }: { kicker: string; title: string }) {
+  const watermarkRef = useParallaxRef<HTMLDivElement>(50)
   return (
-    <section id={`section${num}`} style={{ background: bg, padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-        <div className="section-number">{num}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start', paddingTop: 80 }}>
-          <FadeSection>
-            <h2 className="section-title" style={{ marginBottom: 32, color: 'var(--ink)' }}>
-              {line1}<br />
-              <span style={{ color: 'var(--turquoise)' }}>{line2}</span>
-            </h2>
-            <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--ink-muted)', maxWidth: 440 }}>{para}</p>
-          </FadeSection>
-          <FadeSection style={{ paddingTop: 8 }}>{media}</FadeSection>
+    <section style={{ background: 'var(--bordeaux)', padding: '130px 48px 110px', position: 'relative', overflow: 'hidden' }}>
+      {/* marginTop (not a translateY transform) centers this so GSAP's own
+          y-parallax transform below doesn't clobber it */}
+      <div ref={watermarkRef} style={{ position: 'absolute', top: '50%', insetInlineEnd: -60, marginTop: -210 }}>
+        <CircuitTree size={420} muted />
+      </div>
+      <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        <FadeSection>
+          <div style={{ maxWidth: 780, margin: '0 auto', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 20 }}>{kicker}</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(2.2rem,5vw,4.4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', color: '#fff' }}>{title}</p>
+          </div>
+        </FadeSection>
+      </div>
+    </section>
+  )
+}
+
+// ── Story section — one numbered chapter of the narrative (editorial layout) ─
+function Story({ s, bg, idx }: { s: StorySection; bg: string; idx: number }) {
+  const imageFirst = idx % 2 === 1
+  const numberRef = useParallaxRef<HTMLDivElement>(30)
+
+  const textBlock = (
+    <div style={{ maxWidth: s.media ? 520 : 760 }}>
+      {s.kicker && (
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 18 }}>{s.kicker}</p>
+      )}
+      <h2 className="section-title" style={{ marginBottom: s.subtitle ? 14 : 28, color: 'var(--ink)', fontSize: 'clamp(2.1rem, 4.4vw, 4rem)' }}>{s.title}</h2>
+      {s.subtitle && (
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.1rem', color: 'var(--turquoise)', marginBottom: 28, letterSpacing: '0.01em' }}>{s.subtitle}</p>
+      )}
+      {s.attribution && (
+        <p style={{ fontSize: '0.8rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 28 }}>— {s.attribution}</p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {s.paragraphs.map((p, i) => (
+          <p key={i} style={{ fontSize: '1rem', lineHeight: 1.85, color: 'var(--ink-muted)' }}>{p}</p>
+        ))}
+      </div>
+
+      {s.disciplines && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 36 }}>
+          {s.disciplines.map((d, i) => {
+            const color = ['var(--turquoise)', 'var(--coral)', 'var(--blue)', 'var(--mint)', 'var(--gold)', 'var(--bordeaux)'][i % 6]
+            return <span key={d} className="tag-pill" style={{ color, borderColor: color }}>{d}</span>
+          })}
         </div>
+      )}
+
+      {s.pullQuote && (
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem,2.4vw,2rem)', lineHeight: 1.32, color: 'var(--ink)', margin: '32px 0 0', maxWidth: 600 }}>
+          {s.pullQuote}
+        </p>
+      )}
+
+      {s.process && (
+        <div style={{ marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: '6px 26px' }}>
+          {s.process.map((step) => (
+            <span key={step} style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.02em', color: 'var(--ink)' }}>{step}</span>
+          ))}
+        </div>
+      )}
+
+      {s.closing && (
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--turquoise)', marginTop: 30, lineHeight: 1.5 }}>{s.closing}</p>
+      )}
+    </div>
+  )
+
+  const mediaBlock = s.media && (
+    <ParallaxImage
+      src={s.media.src}
+      alt={s.media.alt}
+      caption={
+        <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{s.media.caption}</p>
+      }
+    />
+  )
+
+  return (
+    <section id={`section${s.num}`} style={{ background: bg, padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative' }}>
+        <div ref={numberRef} className="section-number">{s.num}</div>
+        {s.media ? (
+          <div className="story-split" style={{ alignItems: 'start', paddingTop: 80 }}>
+            <FadeSection style={{ order: imageFirst ? 2 : 1 }}>{textBlock}</FadeSection>
+            <FadeSection style={{ order: imageFirst ? 1 : 2, paddingTop: 8 }}>{mediaBlock}</FadeSection>
+          </div>
+        ) : (
+          <div className="story-split story-split-solo" style={{ alignItems: 'center', paddingTop: 80 }}>
+            <FadeSection style={{ order: imageFirst ? 2 : 1 }}>{textBlock}</FadeSection>
+            <FadeSection style={{ order: imageFirst ? 1 : 2 }} className="quote-decor">
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 360 }}>
+                <span aria-hidden="true" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(12rem, 20vw, 22rem)', lineHeight: 0.6, color: 'var(--turquoise-light)', userSelect: 'none' }}>"</span>
+                <div style={{ position: 'absolute' }}>
+                  <CircuitTree size={130} muted />
+                </div>
+              </div>
+            </FadeSection>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+// ── Story closing — final chapter (bordeaux, centered) bridging into contact ─
+function StoryClosing({ s }: { s: StorySection }) {
+  const watermarkRef = useParallaxRef<HTMLDivElement>(50)
+  return (
+    <section id={`section${s.num}`} style={{ background: 'var(--bordeaux)', padding: '110px 48px', position: 'relative', overflow: 'hidden' }}>
+      <div ref={watermarkRef} style={{ position: 'absolute', bottom: -80, insetInlineStart: -60 }}>
+        <CircuitTree size={420} muted />
+      </div>
+      <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        <div className="section-number section-number-dark">{s.num}</div>
+        <FadeSection>
+          <div style={{ maxWidth: 740, margin: '80px auto 0', textAlign: 'center' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.2rem,5vw,4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 32 }}>{s.title}</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {s.paragraphs.map((p, i) => (
+                <p key={i} style={{ fontSize: '1rem', lineHeight: 1.85, color: 'rgba(255,255,255,0.65)' }}>{p}</p>
+              ))}
+            </div>
+            {s.closing && (
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.3rem,2.4vw,1.8rem)', color: '#fff', marginTop: 28 }}>{s.closing}</p>
+            )}
+          </div>
+        </FadeSection>
       </div>
     </section>
   )
@@ -271,12 +391,20 @@ function Page() {
   const [mentions, setMentions] = useState(false)
   const [form, setForm] = useState({ nom: '', email: '', tel: '', message: '', rgpd: false })
   const [sent, setSent] = useState(false)
+  const heroWatermarkRef = useParallaxRef<HTMLDivElement>(35)
+  const contactWatermarkRef = useParallaxRef<HTMLDivElement>(45)
+  const clientsNumberRef = useParallaxRef<HTMLDivElement>(30)
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', fn, { passive: true })
     return () => window.removeEventListener('scroll', fn)
   }, [])
+
+  // Text length/direction flips on language switch, which shifts every
+  // section's position — recalc ScrollTrigger offsets once the new layout
+  // has painted so parallax stays lined up with its trigger element.
+  useEffect(() => { refreshScrollFx() }, [lang])
 
   const go = (href: string) => {
     setMenuOpen(false)
@@ -285,6 +413,7 @@ function Page() {
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
+      <ScrollProgress />
 
       {/* ── HEADER ──────────────────────────────────────────────────────────── */}
       <header style={{
@@ -342,8 +471,9 @@ function Page() {
 
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '80px 48px 80px', textAlign: 'center', position: 'relative', overflow: 'hidden', background: '#fff' }}>
-        {/* Watermark */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+        {/* Watermark — marginTop/Left (not a translate transform) centers it
+            so GSAP's own y-parallax transform doesn't clobber the centering */}
+        <div ref={heroWatermarkRef} style={{ position: 'absolute', top: '50%', left: '50%', marginTop: -260, marginLeft: -260, pointerEvents: 'none' }}>
           <CircuitTree size={520} muted />
         </div>
 
@@ -354,7 +484,7 @@ function Page() {
         <div style={{ position: 'relative', zIndex: 1, marginTop: 32 }}>
           {/* Each line sits behind a curtain that slides away on load, instead
               of the line itself fading/translating in. */}
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.8rem,7vw,7rem)', lineHeight: 0.92, letterSpacing: '-0.02em', textTransform: 'uppercase', color: 'var(--ink)' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.8rem,7vw,7rem)', lineHeight: 'var(--lh-display-hero)', letterSpacing: '-0.02em', textTransform: 'uppercase', color: 'var(--ink)' }}>
             <span style={{ display: 'block', position: 'relative', overflow: 'hidden' }}>
               {t.hero.line1}
               <span className="reveal-mask" style={{ animationDelay: '0.3s' }} />
@@ -382,169 +512,37 @@ function Page() {
         </div>
       </section>
 
-      {/* ── SECTION 00 — Positionnement (bordeaux) ──────────────────────────── */}
-      <section id="section00" style={{ background: 'var(--bordeaux)', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', insetInlineEnd: -60, transform: 'translateY(-50%)' }}>
-          <CircuitTree size={420} muted />
-        </div>
-        <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <div className="section-number section-number-dark">00</div>
-          <FadeSection>
-            <div style={{ maxWidth: 780, margin: '80px auto 0', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(2rem,4.5vw,4rem)', lineHeight: 1.05, letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 36 }}>
-                {t.section00.quote}<br />
-                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.6em', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{t.section00.subtitle}</span>
-              </p>
-              <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.18)', margin: '0 auto 36px', width: 80 }} />
-              <p style={{ fontSize: '1rem', lineHeight: 1.85, color: 'rgba(255,255,255,0.6)' }}>
-                {t.section00.body}
-              </p>
-            </div>
-          </FadeSection>
-        </div>
-      </section>
+      {/* ── STORY INTRO — "Kiirobi.. Au commencement était l'observation" ───── */}
+      <StoryIntro kicker={t.storyIntro.kicker} title={t.storyIntro.title} />
 
-      {/* ── SECTION 01 — Excellente ─────────────────────────────────────────── */}
-      <SplitSection
-        num="01"
-        line1={t.section01.line1}
-        line2={t.section01.line2}
-        para={t.section01.para}
-        media={
-          <>
-            <div style={{ background: '#1a1a1a', aspectRatio: '16/9', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}>
-              <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=450&fit=crop&auto=format" alt="Studio de production audiovisuelle Kiirobi" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,142,140,0.3)', backdropFilter: 'blur(4px)' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z" /></svg>
-                </div>
-              </div>
-            </div>
-            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section01.caption1}</p>
-            <div style={{ marginTop: 20 }}>
-              <img src="https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=800&h=400&fit=crop&auto=format" alt="Accompagnement médiatique Nations Unies FAO PAM UNICEF" style={{ width: '100%', aspectRatio: '16/8', objectFit: 'cover' }} />
-              <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section01.caption2}</p>
-            </div>
-          </>
-        }
-      />
+      {/* ── STORY — 10 numbered chapters (00 → 09), alternating background ──── */}
+      {t.story.map((s, i) =>
+        s.num === '09'
+          ? <StoryClosing key={s.num} s={s} />
+          : <Story key={s.num} s={s} bg={i % 2 === 0 ? '#fff' : 'var(--ground-alt)'} idx={i} />
+      )}
 
-      {/* ── SECTION 02 — Créative ───────────────────────────────────────────── */}
-      <SplitSection
-        num="02"
-        line1={t.section02.line1}
-        line2={t.section02.line2}
-        bg="var(--ground-alt)"
-        para={t.section02.para}
-        media={
-          <>
-            <img src="https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=560&fit=crop&auto=format" alt="Création d'identités visuelles et motion design Kiirobi" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />
-            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section02.caption}</p>
-          </>
-        }
-      />
-
-      {/* ── SECTION 03 — Transparente ───────────────────────────────────────── */}
-      <SplitSection
-        num="03"
-        line1={t.section03.line1}
-        line2={t.section03.line2}
-        para={t.section03.para}
-        media={
-          <>
-            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=560&fit=crop&auto=format" alt="Coordination terrain SWEDD Banque mondiale Kiirobi" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />
-            <p style={{ fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginTop: 10 }}>{t.section03.caption}</p>
-          </>
-        }
-      />
-
-      {/* ── SECTION 04 — Technologique ──────────────────────────────────────── */}
-      <section id="section04" style={{ background: 'var(--ground-alt)', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
+      {/* ── CLIENTS ─────────────────────────────────────────────────────────── */}
+      <section id="section-clients" style={{ background: '#fff', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-          <div className="section-number">04</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start', paddingTop: 80 }}>
-            <FadeSection>
-              <h2 className="section-title" style={{ marginBottom: 32 }}>
-                {t.section04.line1}<br />
-                <span style={{ color: 'var(--turquoise)' }}>{t.section04.line2}</span>
-              </h2>
-              <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--ink-muted)', maxWidth: 440 }}>
-                {t.section04.para}
-              </p>
-            </FadeSection>
-            <div />
-          </div>
-
-          {/* Full-width image */}
-          <FadeSection style={{ marginTop: 56 }}>
-            <div style={{ position: 'relative' }}>
-              <img src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=1440&h=560&fit=crop&auto=format" alt="Équipement de production audiovisuelle Kiirobi" style={{ width: '100%', height: 460, objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', bottom: 16, insetInlineStart: 20, background: 'rgba(255,255,255,0.92)', padding: '6px 14px', backdropFilter: 'blur(8px)' }}>
-                <p style={{ fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-muted)' }}>{t.section04.imageCaption}</p>
-              </div>
-            </div>
-          </FadeSection>
-
-          {/* 4 pôles */}
-          <FadeSection style={{ marginTop: 64 }}>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 36 }}>
-              {t.section04.polesTitle}
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
-              {t.section04.poles.map((item, i) => {
-                const color = ['var(--coral)', 'var(--blue)', 'var(--mint)', 'var(--gold)'][i % 4]
-                return (
-                  <div key={item.n} className="expertise-item" style={{ paddingBlock: 28, paddingInlineEnd: 24, paddingInlineStart: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.1em', color, marginBottom: 10 }}>{item.n}</div>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 10, color: 'var(--ink)' }}>{item.title}</h3>
-                    <p style={{ fontSize: '0.8rem', lineHeight: 1.7, color: 'var(--ink-muted)' }}>{item.desc}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </FadeSection>
-        </div>
-      </section>
-
-      {/* ── SECTION 05 — Clients ────────────────────────────────────────────── */}
-      <section id="section05" style={{ background: '#fff', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-          <div className="section-number">05</div>
+          <div ref={clientsNumberRef} className="section-number">+</div>
           <FadeSection style={{ paddingTop: 80, marginBottom: 56 }}>
             <h2 className="section-title">
-              {t.section05.line1}<br />
-              <span style={{ color: 'var(--turquoise)' }}>{t.section05.line2}</span>
+              {t.clientsHeading.line1}<br />
+              <span style={{ color: 'var(--turquoise)' }}>{t.clientsHeading.line2}</span>
             </h2>
           </FadeSection>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {t.clients.map((c, i) => {
-              const accent = [
-                'var(--turquoise)', 'var(--coral)', 'var(--blue)',
-                'var(--mint)', 'var(--gold)', 'var(--bordeaux)',
-              ][i % 6]
-              return (
-                <FadeSection key={c.name}>
-                  <div className="client-card">
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: accent, paddingBottom: 14, borderBottom: '1px solid var(--rule)' }}>{c.logo}</div>
-                    <p style={{ fontSize: '0.84rem', lineHeight: 1.7, color: 'var(--ink-muted)', flexGrow: 1 }}>{c.desc}</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {c.tags.map((t) => <span key={t} className="tag-pill">{t}</span>)}
-                    </div>
-                  </div>
-                </FadeSection>
-              )
-            })}
-          </div>
+          <ClientsMasonry clients={t.clients} />
         </div>
       </section>
 
       {/* ── CONTACT ─────────────────────────────────────────────────────────── */}
       <section id="contact" style={{ background: 'var(--ground-alt)', padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', bottom: -80, insetInlineEnd: -60, opacity: 0.06 }}>
+        <div ref={contactWatermarkRef} style={{ position: 'absolute', bottom: -80, insetInlineEnd: -60, opacity: 0.06 }}>
           <CircuitTree size={500} muted />
         </div>
         <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
+          <div className="contact-grid" style={{ alignItems: 'start' }}>
             <FadeSection>
               <h2 className="section-title" style={{ marginBottom: 48 }}>
                 {t.contact.heading[0]}<br />

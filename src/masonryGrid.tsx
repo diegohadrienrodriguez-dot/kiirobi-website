@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ClientEntry } from './content'
 
-// ── Clients masonry grid ─────────────────────────────────────────────────────
-// Pinterest-style reveal for the "Ils nous font confiance" section: brand-
-// colored gradient tiles (no stock photography — these are real named clients
-// with no project imagery on hand, so a fabricated "project photo" would be
-// misleading) staggered into view on scroll. Each tile shows just the client
-// name by default; tapping/clicking it expands the card in place to reveal
-// the mission description and tags — the disclosure doubles as the touch
-// equivalent of a hover reveal, since it works identically on mobile.
+// ── Clients marquee — "Ils nous font confiance" ─────────────────────────────
+// Vertically scrolling columns, each looping seamlessly (rendered twice,
+// scrubbed from 0 to -50% so the seam is invisible). Brand-colored gradient
+// tiles (no stock photography — these are real named clients with no project
+// imagery on hand, so a fabricated "project photo" would be misleading).
+// Tapping/clicking a tile expands it in place to reveal the mission
+// description and tags — the disclosure doubles as the touch equivalent of a
+// hover reveal, since it works identically on mobile. Hovering a column
+// pauses its scroll so a tile can be read/expanded without it drifting away.
 
 const ACCENTS: [string, string][] = [
   ['#00A6A3', '#00615F'], // turquoise
@@ -20,9 +21,13 @@ const ACCENTS: [string, string][] = [
   ['#9B1257', '#4D062C'], // bordeaux
 ]
 
-// Deterministic height rhythm so the columns interlock like a real masonry
-// wall instead of lining back up into a plain grid.
+// Deterministic height rhythm so a column doesn't read as a flat, uniform list.
 const HEIGHTS = [300, 230, 340, 260, 290, 320, 240, 360]
+
+// One duration per column — slow and mutually offset so the columns never
+// fall back into visual sync with one another.
+const COLUMN_DURATIONS = [42, 52, 46, 58]
+const COLUMN_CLASSES = ['', 'clients-col-2', 'clients-col-3', 'clients-col-4']
 
 // Short teaser shown by default on the tile; the full sentence only appears
 // once the card is expanded.
@@ -34,27 +39,13 @@ function previewOf(desc: string) {
   return `${words.slice(0, PREVIEW_WORD_COUNT).join(' ')}…`
 }
 
-const tileVariants = {
-  hidden: { opacity: 0, y: 26 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } },
-}
-
 function ClientTile({ c, index }: { c: ClientEntry; index: number }) {
   const [open, setOpen] = useState(false)
   const [from, to] = ACCENTS[index % ACCENTS.length]
   const height = HEIGHTS[index % HEIGHTS.length]
 
   return (
-    <motion.div
-      className="client-tile"
-      style={{ minHeight: height }}
-      variants={tileVariants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.2 }}
-      whileHover={{ scale: 1.02, y: -4 }}
-      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-    >
+    <div className="client-tile" style={{ minHeight: height }}>
       <div className="client-tile-photo" style={{ backgroundImage: `url(${c.image})` }} />
       <div className="client-tile-tint" style={{ background: `linear-gradient(155deg, ${from}b3, ${to}b3)` }} />
       <button
@@ -87,15 +78,43 @@ function ClientTile({ c, index }: { c: ClientEntry; index: number }) {
           </AnimatePresence>
         </div>
       </button>
-    </motion.div>
+    </div>
+  )
+}
+
+function ClientColumn({ clients, offset, duration, className }: {
+  clients: ClientEntry[]; offset: number; duration: number; className: string
+}) {
+  return (
+    <div className={`clients-column ${className}`}>
+      <div className="clients-column-track" style={{ animationDuration: `${duration}s` }}>
+        {[0, 1].map((rep) => (
+          <div className="clients-column-set" key={rep} aria-hidden={rep === 1 || undefined}>
+            {clients.map((c, i) => (
+              <ClientTile key={`${rep}-${c.name}`} c={c} index={offset + i} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
 export function ClientsMasonry({ clients }: { clients: ClientEntry[] }) {
+  const columnCount = 4
+  const perColumn = Math.ceil(clients.length / columnCount)
+  const columns = Array.from({ length: columnCount }, (_, i) => clients.slice(i * perColumn, (i + 1) * perColumn)).filter((c) => c.length > 0)
+
   return (
-    <div className="clients-masonry">
-      {clients.map((c, i) => (
-        <ClientTile key={c.name} c={c} index={i} />
+    <div className="clients-marquee">
+      {columns.map((columnClients, i) => (
+        <ClientColumn
+          key={i}
+          clients={columnClients}
+          offset={i * perColumn}
+          duration={COLUMN_DURATIONS[i % COLUMN_DURATIONS.length]}
+          className={COLUMN_CLASSES[i]}
+        />
       ))}
     </div>
   )

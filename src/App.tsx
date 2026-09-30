@@ -116,6 +116,37 @@ function FadeSection({ children, style = {}, className = '', delay = 0 }: { chil
   )
 }
 
+// ── Small inline field icons — kept as hand-drawn SVG (no icon package in
+// this project's dependencies) so the contact form can carry the same
+// icon-in-field language as the reference design without adding a dependency.
+function FieldIcon({ name, size = 18 }: { name: 'user' | 'mail' | 'phone' | 'message' | 'alert' | 'check'; size?: number }) {
+  const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  if (name === 'user') return <svg {...common}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+  if (name === 'mail') return <svg {...common}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 5L2 7" /></svg>
+  if (name === 'phone') return <svg {...common}><path d="M13.83 16.57a1 1 0 0 0 1.21-.3l.36-.47A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.47.35a1 1 0 0 0-.29 1.23 14 14 0 0 0 6.4 6.38Z" /></svg>
+  if (name === 'message') return <svg {...common}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" /></svg>
+  if (name === 'alert') return <svg {...common}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+  return <svg {...common}><path d="M21.8 10A10 10 0 1 1 17 3.34" /><path d="m9 11 3 3L22 4" /></svg>
+}
+
+// A form field: icon-prefixed input/textarea, inline error on blur.
+function Field({ icon, error, textarea, ...props }: {
+  icon: 'user' | 'mail' | 'phone' | 'message'
+  error?: string
+  textarea?: boolean
+} & React.InputHTMLAttributes<HTMLInputElement> & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const Tag = textarea ? 'textarea' : 'input'
+  return (
+    <div className="field">
+      <span className="field-icon" aria-hidden="true"><FieldIcon name={icon} /></span>
+      <Tag className={`field-input${error ? ' field-input-error' : ''}`} {...props} />
+      {error && (
+        <p className="field-error"><FieldIcon name="alert" size={13} />{error}</p>
+      )}
+    </div>
+  )
+}
+
 // ── Mentions légales modal ────────────────────────────────────────────────────
 function MentionsModal({ onClose, copy }: { onClose: () => void; copy: SiteContent['mentions'] }) {
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -248,7 +279,8 @@ function Story({ s, bg, idx }: { s: StorySection; bg: string; idx: number }) {
   const numberRef = useParallaxRef<HTMLDivElement>(30)
 
   const textBlock = (
-    <div style={{ maxWidth: s.media ? 520 : 760 }}>
+    <div style={{ maxWidth: s.media ? 520 : 760, position: 'relative' }}>
+      {s.media && <div ref={numberRef} className="section-number" style={{ insetInlineStart: 0 }}>{s.num}</div>}
       {s.kicker && (
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 18 }}>{s.kicker}</p>
       )}
@@ -306,13 +338,13 @@ function Story({ s, bg, idx }: { s: StorySection; bg: string; idx: number }) {
   )
 
   return (
-    <section id={`section${s.num}`} style={{ background: bg, padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
+    <section id={`section${s.num}`} style={{ background: bg, padding: '100px 48px', position: 'relative', overflow: s.media ? 'visible' : 'hidden' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative' }}>
-        <div ref={numberRef} className="section-number">{s.num}</div>
+        {!s.media && <div ref={numberRef} className="section-number">{s.num}</div>}
         {s.media ? (
           <div className="story-split" style={{ alignItems: 'start', paddingTop: 80 }}>
             <FadeSection style={{ order: imageFirst ? 2 : 1 }}>{textBlock}</FadeSection>
-            <FadeSection style={{ order: imageFirst ? 1 : 2, paddingTop: 8 }}>{mediaBlock}</FadeSection>
+            <FadeSection style={{ order: imageFirst ? 1 : 2, position: 'sticky', top: 108, alignSelf: 'start' }}>{mediaBlock}</FadeSection>
           </div>
         ) : (
           <div className="story-split story-split-solo" style={{ alignItems: 'center', paddingTop: 80 }}>
@@ -391,6 +423,45 @@ function Page() {
   const [mentions, setMentions] = useState(false)
   const [form, setForm] = useState({ nom: '', email: '', tel: '', message: '', rgpd: false })
   const [sent, setSent] = useState(false)
+  const [formErrors, setFormErrors] = useState<Partial<Record<'nom' | 'email' | 'message' | 'rgpd', string>>>({})
+  const [formTouched, setFormTouched] = useState<Partial<Record<'nom' | 'email' | 'message' | 'rgpd', boolean>>>({})
+
+  const validateField = (field: 'nom' | 'email' | 'message' | 'rgpd', value: string | boolean) => {
+    const err = t.contact.form.errors
+    if (field === 'nom') return typeof value === 'string' && !value.trim() ? err.nameRequired : ''
+    if (field === 'email') {
+      if (typeof value === 'string' && !value.trim()) return err.emailRequired
+      if (typeof value === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return err.emailInvalid
+      return ''
+    }
+    if (field === 'message') return typeof value === 'string' && !value.trim() ? err.messageRequired : ''
+    if (field === 'rgpd') return !value ? err.rgpdRequired : ''
+    return ''
+  }
+
+  const handleFieldChange = (field: 'nom' | 'email' | 'message' | 'rgpd', value: string | boolean) => {
+    setForm((f) => ({ ...f, [field]: value }))
+    if (formTouched[field]) setFormErrors((e) => ({ ...e, [field]: validateField(field, value) || undefined }))
+  }
+
+  const handleFieldBlur = (field: 'nom' | 'email' | 'message' | 'rgpd', value: string | boolean) => {
+    setFormTouched((t) => ({ ...t, [field]: true }))
+    setFormErrors((e) => ({ ...e, [field]: validateField(field, value) || undefined }))
+  }
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const next = {
+      nom: validateField('nom', form.nom) || undefined,
+      email: validateField('email', form.email) || undefined,
+      message: validateField('message', form.message) || undefined,
+      rgpd: validateField('rgpd', form.rgpd) || undefined,
+    }
+    setFormErrors(next)
+    setFormTouched({ nom: true, email: true, message: true, rgpd: true })
+    if (Object.values(next).some(Boolean)) return
+    setSent(true)
+  }
   const heroWatermarkRef = useParallaxRef<HTMLDivElement>(35)
   const contactWatermarkRef = useParallaxRef<HTMLDivElement>(45)
   const clientsNumberRef = useParallaxRef<HTMLDivElement>(30)
@@ -569,23 +640,73 @@ function Page() {
 
             <FadeSection>
               {sent ? (
-                <div style={{ paddingTop: 16 }}>
-                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.2rem', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 12 }}>{t.contact.form.sentTitle}</p>
-                  <p style={{ color: 'var(--ink-muted)', lineHeight: 1.7 }}>{t.contact.form.sentBody}</p>
+                <div className="form-banner form-banner-success">
+                  <span className="form-banner-icon"><FieldIcon name="check" size={20} /></span>
+                  <div>
+                    <p className="form-banner-title">{t.contact.form.sentTitle}</p>
+                    <p className="form-banner-body">{t.contact.form.sentBody}</p>
+                  </div>
                 </div>
               ) : (
-                <form onSubmit={(e) => { e.preventDefault(); setSent(true) }} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <input className="form-input" type="text" placeholder={t.contact.form.name} required value={form.nom} onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))} />
-                  <input className="form-input" type="email" placeholder={t.contact.form.email} required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-                  <input className="form-input" type="tel" placeholder={t.contact.form.phone} value={form.tel} onChange={(e) => setForm((f) => ({ ...f, tel: e.target.value }))} />
-                  <textarea className="form-input" placeholder={t.contact.form.message} rows={5} required value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} style={{ resize: 'vertical' }} />
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <input type="checkbox" id="rgpd" required checked={form.rgpd} onChange={(e) => setForm((f) => ({ ...f, rgpd: e.target.checked }))} style={{ marginTop: 3, accentColor: 'var(--turquoise)', flexShrink: 0 }} />
-                    <label htmlFor="rgpd" style={{ fontSize: '0.78rem', lineHeight: 1.6, color: 'var(--ink-muted)' }}>
-                      {t.contact.form.rgpd}
-                    </label>
+                <form onSubmit={handleFormSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+                  <Field
+                    icon="user"
+                    type="text"
+                    placeholder={t.contact.form.name}
+                    value={form.nom}
+                    error={formErrors.nom}
+                    onChange={(e) => handleFieldChange('nom', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('nom', e.target.value)}
+                  />
+                  <Field
+                    icon="mail"
+                    type="email"
+                    placeholder={t.contact.form.email}
+                    value={form.email}
+                    error={formErrors.email}
+                    onChange={(e) => handleFieldChange('email', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('email', e.target.value)}
+                  />
+                  <Field
+                    icon="phone"
+                    type="tel"
+                    placeholder={t.contact.form.phone}
+                    value={form.tel}
+                    onChange={(e) => setForm((f) => ({ ...f, tel: e.target.value }))}
+                  />
+                  <Field
+                    icon="message"
+                    textarea
+                    placeholder={t.contact.form.message}
+                    rows={5}
+                    value={form.message}
+                    error={formErrors.message}
+                    onChange={(e) => handleFieldChange('message', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('message', e.target.value)}
+                    style={{ resize: 'vertical' }}
+                  />
+                  <div>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <input
+                        type="checkbox"
+                        id="rgpd"
+                        checked={form.rgpd}
+                        onChange={(e) => handleFieldChange('rgpd', e.target.checked)}
+                        onBlur={() => handleFieldBlur('rgpd', form.rgpd)}
+                        style={{ marginTop: 3, accentColor: 'var(--turquoise)', flexShrink: 0 }}
+                      />
+                      <label htmlFor="rgpd" style={{ fontSize: '0.78rem', lineHeight: 1.6, color: 'var(--ink-muted)' }}>
+                        {t.contact.form.rgpd}
+                      </label>
+                    </div>
+                    {formErrors.rgpd && <p className="field-error" style={{ marginInlineStart: 32 }}><FieldIcon name="alert" size={13} />{formErrors.rgpd}</p>}
                   </div>
-                  <div><button type="submit" className="cta-btn">{t.contact.form.submit}</button></div>
+                  <div>
+                    <button type="submit" className="cta-btn">
+                      <span className="cta-btn-label">{t.contact.form.submit}</span>
+                      <span className="cta-btn-icon" aria-hidden="true">→</span>
+                    </button>
+                  </div>
                 </form>
               )}
             </FadeSection>

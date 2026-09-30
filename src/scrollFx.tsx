@@ -75,6 +75,19 @@ export function ParallaxImage({ src, alt, caption, className, style }: {
           scrollTrigger: { trigger: wrap, start: 'top bottom', end: 'bottom top', scrub: true },
         },
       )
+      // Reveal: the photo wipes into view from behind a curtain as the frame
+      // scrolls up into the viewport — done once, early, rather than tracking
+      // the whole transit like the drift/parallax above.
+      gsap.fromTo(
+        wrap,
+        { clipPath: 'inset(0 0 100% 0)', opacity: 0.4 },
+        {
+          clipPath: 'inset(0 0 0% 0)',
+          opacity: 1,
+          ease: 'none',
+          scrollTrigger: { trigger: wrap, start: 'top 92%', end: 'top 35%', scrub: true },
+        },
+      )
     })
     return () => ctx.revert()
   }, [src])

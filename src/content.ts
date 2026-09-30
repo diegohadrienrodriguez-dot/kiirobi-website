@@ -57,6 +57,13 @@ export interface SiteContent {
       submit: string
       sentTitle: string
       sentBody: string
+      errors: {
+        nameRequired: string
+        emailRequired: string
+        emailInvalid: string
+        messageRequired: string
+        rgpdRequired: string
+      }
     }
   }
   footer: { brand: string; tagline: string; legalLink: string }
@@ -379,6 +386,13 @@ export const content: Record<Lang, SiteContent> = {
         submit: 'Envoyer',
         sentTitle: 'Message envoyé !',
         sentBody: 'Nous reviendrons vers vous dans les meilleurs délais.',
+        errors: {
+          nameRequired: 'Le nom est requis',
+          emailRequired: "L'e-mail est requis",
+          emailInvalid: 'Adresse e-mail invalide',
+          messageRequired: 'Le message est requis',
+          rgpdRequired: "Merci d'accepter la politique de confidentialité",
+        },
       },
     },
     footer: {
@@ -433,6 +447,13 @@ export const content: Record<Lang, SiteContent> = {
         submit: 'إرسال',
         sentTitle: 'تم إرسال الرسالة!',
         sentBody: 'سنعاود التواصل معكم في أقرب وقت ممكن.',
+        errors: {
+          nameRequired: 'الاسم مطلوب',
+          emailRequired: 'البريد الإلكتروني مطلوب',
+          emailInvalid: 'عنوان بريد إلكتروني غير صالح',
+          messageRequired: 'الرسالة مطلوبة',
+          rgpdRequired: 'يرجى الموافقة على سياسة الخصوصية',
+        },
       },
     },
     footer: {

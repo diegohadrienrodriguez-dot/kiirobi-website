@@ -99,6 +99,7 @@ export function ParallaxImage({ src, alt, caption, className, style }: {
           ref={imgRef}
           src={src}
           alt={alt}
+          loading="lazy"
           style={{ position: 'absolute', inset: '-60px 0', width: '100%', height: 'calc(100% + 120px)', objectFit: 'cover' }}
         />
       </div>

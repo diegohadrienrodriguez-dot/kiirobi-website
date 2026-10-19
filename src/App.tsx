@@ -110,7 +110,7 @@ function FadeSection({ children, style = {}, className = '', delay = 0 }: { chil
     return () => obs.disconnect()
   }, [])
   return (
-    <div ref={ref} className={className} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(28px)', transition: `opacity 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}s, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}s`, ...style }}>
+    <div ref={ref} className={className} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(32px)', transition: `opacity 0.6s ease-out ${delay}s, transform 0.85s cubic-bezier(0.34,1.56,0.64,1) ${delay}s`, ...style }}>
       {children}
     </div>
   )
@@ -423,6 +423,8 @@ function Page() {
   const [mentions, setMentions] = useState(false)
   const [form, setForm] = useState({ nom: '', email: '', tel: '', message: '', rgpd: false })
   const [sent, setSent] = useState(false)
+  const [formSubmitting, setFormSubmitting] = useState(false)
+  const [formSendError, setFormSendError] = useState(false)
   const [formErrors, setFormErrors] = useState<Partial<Record<'nom' | 'email' | 'message' | 'rgpd', string>>>({})
   const [formTouched, setFormTouched] = useState<Partial<Record<'nom' | 'email' | 'message' | 'rgpd', boolean>>>({})
 
@@ -449,7 +451,11 @@ function Page() {
     setFormErrors((e) => ({ ...e, [field]: validateField(field, value) || undefined }))
   }
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  // TODO: set VITE_FORMSPREE_URL in .env to your Formspree form endpoint
+  // (e.g. https://formspree.io/f/YOUR_FORM_ID) to enable real email delivery.
+  const FORMSPREE_ENDPOINT = (import.meta.env.VITE_FORMSPREE_URL as string) || ''
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const next = {
       nom: validateField('nom', form.nom) || undefined,
@@ -460,7 +466,21 @@ function Page() {
     setFormErrors(next)
     setFormTouched({ nom: true, email: true, message: true, rgpd: true })
     if (Object.values(next).some(Boolean)) return
-    setSent(true)
+    setFormSubmitting(true)
+    setFormSendError(false)
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.nom, email: form.email, phone: form.tel, message: form.message }),
+      })
+      if (!res.ok) throw new Error('send failed')
+      setSent(true)
+    } catch {
+      setFormSendError(true)
+    } finally {
+      setFormSubmitting(false)
+    }
   }
   const heroWatermarkRef = useParallaxRef<HTMLDivElement>(35)
   const contactWatermarkRef = useParallaxRef<HTMLDivElement>(45)
@@ -512,7 +532,7 @@ function Page() {
             <div className="hidden md:flex" style={{ gap: 0, border: '1px solid var(--rule)', overflow: 'hidden' }}>
               <LangSwitch size="sm" />
             </div>
-            <button className="flex md:hidden flex-col gap-[5px]" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} onClick={() => setMenuOpen((v) => !v)}>
+            <button className="flex md:hidden flex-col gap-[5px]" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} onClick={() => setMenuOpen((v) => !v)} aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'} aria-expanded={menuOpen}>
               <span className="burger-line" style={{ transform: menuOpen ? 'translateY(6.5px) rotate(45deg)' : 'none' }} />
               <span className="burger-line" style={{ opacity: menuOpen ? 0 : 1 }} />
               <span className="burger-line" style={{ transform: menuOpen ? 'translateY(-6.5px) rotate(-45deg)' : 'none' }} />
@@ -701,10 +721,19 @@ function Page() {
                     </div>
                     {formErrors.rgpd && <p className="field-error" style={{ marginInlineStart: 32 }}><FieldIcon name="alert" size={13} />{formErrors.rgpd}</p>}
                   </div>
+                  {formSendError && (
+                    <div className="form-banner form-banner-error">
+                      <span className="form-banner-icon" style={{ background: 'var(--coral)' }}><FieldIcon name="alert" size={20} /></span>
+                      <div>
+                        <p className="form-banner-title">{t.contact.form.errorTitle}</p>
+                        <p className="form-banner-body">{t.contact.form.errorBody}</p>
+                      </div>
+                    </div>
+                  )}
                   <div>
-                    <button type="submit" className="cta-btn">
-                      <span className="cta-btn-label">{t.contact.form.submit}</span>
-                      <span className="cta-btn-icon" aria-hidden="true">→</span>
+                    <button type="submit" className="cta-btn" disabled={formSubmitting} aria-busy={formSubmitting}>
+                      <span className="cta-btn-label">{formSubmitting ? t.contact.form.sending : t.contact.form.submit}</span>
+                      <span className="cta-btn-icon" aria-hidden="true">{formSubmitting ? '…' : '→'}</span>
                     </button>
                   </div>
                 </form>

@@ -55,8 +55,11 @@ export interface SiteContent {
       message: string
       rgpd: string
       submit: string
+      sending: string
       sentTitle: string
       sentBody: string
+      errorTitle: string
+      errorBody: string
       errors: {
         nameRequired: string
         emailRequired: string
@@ -384,8 +387,11 @@ export const content: Record<Lang, SiteContent> = {
         message: 'Votre message',
         rgpd: "J'accepte que mes données soient utilisées par Kiirobi dans le cadre du traitement de ma demande, conformément à notre politique de confidentialité.",
         submit: 'Envoyer',
+        sending: 'Envoi en cours…',
         sentTitle: 'Message envoyé !',
         sentBody: 'Nous reviendrons vers vous dans les meilleurs délais.',
+        errorTitle: "L'envoi a échoué",
+        errorBody: 'Une erreur est survenue. Réessayez ou contactez-nous directement à bridge@kiirobi.com.',
         errors: {
           nameRequired: 'Le nom est requis',
           emailRequired: "L'e-mail est requis",
@@ -445,8 +451,11 @@ export const content: Record<Lang, SiteContent> = {
         message: 'رسالتكم',
         rgpd: 'أوافق على استخدام كيروبي لبياناتي في إطار معالجة طلبي، وفقًا لسياسة الخصوصية الخاصة بنا.',
         submit: 'إرسال',
+        sending: 'جارٍ الإرسال…',
         sentTitle: 'تم إرسال الرسالة!',
         sentBody: 'سنعاود التواصل معكم في أقرب وقت ممكن.',
+        errorTitle: 'فشل الإرسال',
+        errorBody: 'حدث خطأ ما. يرجى المحاولة مرة أخرى أو التواصل معنا على bridge@kiirobi.com.',
         errors: {
           nameRequired: 'الاسم مطلوب',
           emailRequired: 'البريد الإلكتروني مطلوب',

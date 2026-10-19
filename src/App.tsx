@@ -368,14 +368,14 @@ function Story({ s, bg, idx }: { s: StorySection; bg: string; idx: number }) {
 function StoryClosing({ s }: { s: StorySection }) {
   const watermarkRef = useParallaxRef<HTMLDivElement>(50)
   return (
-    <section id={`section${s.num}`} style={{ background: 'var(--bordeaux)', padding: '110px 48px', position: 'relative', overflow: 'hidden' }}>
-      <div ref={watermarkRef} style={{ position: 'absolute', bottom: -80, insetInlineStart: -60 }}>
+    <section id={`section${s.num}`} style={{ background: 'var(--turquoise)', padding: '110px 48px 140px', position: 'relative', overflow: 'hidden' }}>
+      <div ref={watermarkRef} style={{ position: 'absolute', bottom: -80, insetInlineStart: -60, opacity: 0.1 }}>
         <CircuitTree size={420} muted />
       </div>
       <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div className="section-number section-number-dark">{s.num}</div>
         <FadeSection>
-          <div style={{ maxWidth: 740, margin: '80px auto 0', textAlign: 'center' }}>
+          <div style={{ maxWidth: 740, margin: '160px auto 0', textAlign: 'center' }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.2rem,5vw,4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 32 }}>{s.title}</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {s.paragraphs.map((p, i) => (

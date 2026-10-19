@@ -26,7 +26,7 @@ const HEIGHTS = [300, 230, 340, 260, 290, 320, 240, 360]
 
 // One duration per column — slow and mutually offset so the columns never
 // fall back into visual sync with one another.
-const COLUMN_DURATIONS = [42, 52, 46, 58]
+const COLUMN_DURATIONS = [22, 27, 24, 30]
 const COLUMN_CLASSES = ['', 'clients-col-2', 'clients-col-3', 'clients-col-4']
 
 // Short teaser shown by default on the tile; the full sentence only appears

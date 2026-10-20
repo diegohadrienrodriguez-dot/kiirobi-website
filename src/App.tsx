@@ -744,7 +744,7 @@ function Page() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer style={{ background: 'var(--bordeaux)', color: '#fff', padding: '56px 48px' }}>
+      <footer style={{ background: '#2a2a2a', color: '#fff', padding: '56px 48px' }}>
         <div style={{ maxWidth: 1440, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 24 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>

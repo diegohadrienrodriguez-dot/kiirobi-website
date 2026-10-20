@@ -96,6 +96,24 @@ function CircuitTree({ size = 80, animated = false, muted = false, speed = 1, pu
   )
 }
 
+// ── StyledTitle — splits a title into two halves: first half normal color,
+// second half in `dimColor`, last word in `dimColor` at 1.13× size.
+function StyledTitle({ children, dimColor = 'var(--ink-muted)' }: { children: string; dimColor?: string }) {
+  const words = children.trim().split(/\s+/)
+  if (words.length <= 2) return <>{children}</>
+  const splitAt = Math.ceil(words.length / 2)
+  const first = words.slice(0, splitAt).join(' ')
+  const middle = words.slice(splitAt, -1)
+  const last = words[words.length - 1]
+  return (
+    <>
+      {first}{' '}
+      {middle.length > 0 && <span style={{ color: dimColor }}>{middle.join(' ')} </span>}
+      <span style={{ color: dimColor, fontSize: '1.13em' }}>{last}</span>
+    </>
+  )
+}
+
 // ── FadeSection wrapper ───────────────────────────────────────────────────────
 // `delay` (seconds) staggers siblings that reveal at roughly the same time —
 // e.g. a grid of cards — mirroring the reference site's `data-reveal-group`.
@@ -265,7 +283,7 @@ function StoryIntro({ kicker, title }: { kicker: string; title: string }) {
         <FadeSection>
           <div style={{ maxWidth: 780, margin: '0 auto', textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 20 }}>{kicker}</p>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(2.2rem,5vw,4.4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', color: '#fff' }}>{title}</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(2.2rem,5vw,4.4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', color: '#fff' }}><StyledTitle dimColor="rgba(255,255,255,0.6)">{title}</StyledTitle></p>
           </div>
         </FadeSection>
       </div>
@@ -284,7 +302,7 @@ function Story({ s, bg, idx }: { s: StorySection; bg: string; idx: number }) {
       {s.kicker && (
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--turquoise)', marginBottom: 18 }}>{s.kicker}</p>
       )}
-      <h2 className="section-title" style={{ marginBottom: s.subtitle ? 14 : 28, color: 'var(--ink)', fontSize: 'clamp(2.1rem, 4.4vw, 4rem)' }}>{s.title}</h2>
+      <h2 className="section-title" style={{ marginBottom: s.subtitle ? 14 : 28, color: 'var(--ink)', fontSize: 'clamp(2.1rem, 4.4vw, 4rem)' }}><StyledTitle>{s.title}</StyledTitle></h2>
       {s.subtitle && (
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.1rem', color: 'var(--turquoise)', marginBottom: 28, letterSpacing: '0.01em' }}>{s.subtitle}</p>
       )}
@@ -376,7 +394,7 @@ function StoryClosing({ s }: { s: StorySection }) {
         <div className="section-number section-number-dark">{s.num}</div>
         <FadeSection>
           <div style={{ maxWidth: 740, margin: '160px auto 0', textAlign: 'center' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.2rem,5vw,4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 32 }}>{s.title}</h2>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.2rem,5vw,4rem)', lineHeight: 'var(--lh-display-loose)', letterSpacing: '-0.02em', textTransform: 'uppercase', color: '#fff', marginBottom: 32 }}><StyledTitle dimColor="rgba(255,255,255,0.6)">{s.title}</StyledTitle></h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {s.paragraphs.map((p, i) => (
                 <p key={i} style={{ fontSize: '1rem', lineHeight: 1.85, color: 'rgba(255,255,255,0.65)' }}>{p}</p>
@@ -619,8 +637,8 @@ function Page() {
           <div ref={clientsNumberRef} className="section-number">+</div>
           <FadeSection style={{ paddingTop: 80, marginBottom: 56 }}>
             <h2 className="section-title">
-              {t.clientsHeading.line1}<br />
-              <span style={{ color: 'var(--turquoise)' }}>{t.clientsHeading.line2}</span>
+              <span style={{ color: 'var(--ink-muted)' }}>{t.clientsHeading.line1}</span><br />
+              <span style={{ color: 'var(--turquoise)', fontSize: '1.13em' }}>{t.clientsHeading.line2}</span>
             </h2>
           </FadeSection>
           <ClientsMasonry clients={t.clients} />
@@ -637,8 +655,8 @@ function Page() {
             <FadeSection>
               <h2 className="section-title" style={{ marginBottom: 48 }}>
                 {t.contact.heading[0]}<br />
-                {t.contact.heading[1]}<br />
-                <span style={{ color: 'var(--turquoise)' }}>{t.contact.heading[2]}</span>
+                <span style={{ color: 'var(--ink-muted)' }}>{t.contact.heading[1]}</span><br />
+                <span style={{ color: 'var(--turquoise)', fontSize: '1.13em' }}>{t.contact.heading[2]}</span>
               </h2>
               {/* Coordinates */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
